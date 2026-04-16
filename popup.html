@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YouTube → Notion</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <div id="app">
+      <h1>YouTube → Notion</h1>
+      
+      <!-- Outlier Filter Section -->
+      <div class="filter-section">
+        <div class="filter-header">
+          <label class="toggle-label">
+            <span>Filter by Outlier</span>
+            <input type="checkbox" id="outlierToggle">
+            <span class="toggle-switch"></span>
+          </label>
+        </div>
+        <div id="sliderContainer" class="slider-container hidden">
+          <div class="slider-labels">
+            <span>Min Outlier:</span>
+            <span id="sliderValue">5x</span>
+          </div>
+          <input type="range" id="outlierSlider" min="1" max="100" value="5" step="1">
+        </div>
+      </div>
+      
+      <!-- Subscriber Filter Section -->
+      <div class="filter-section">
+        <div class="filter-header">
+          <label class="toggle-label">
+            <span>Filter by Subscribers</span>
+            <input type="checkbox" id="subToggle">
+            <span class="toggle-switch"></span>
+          </label>
+        </div>
+        <div id="subContainer" class="slider-container hidden">
+          <div class="sub-inputs">
+            <div class="sub-input-group">
+              <label for="subMin">Min</label>
+              <input type="text" id="subMin" placeholder="e.g. 10K" value="0">
+            </div>
+            <div class="sub-input-group">
+              <label for="subMax">Max</label>
+              <input type="text" id="subMax" placeholder="e.g. 1M" value="">
+            </div>
+          </div>
+          <div class="sub-hint">Use K for thousands, M for millions (e.g. 500K, 2M)</div>
+        </div>
+      </div>
+
+      <!-- Views Filter Section -->
+      <div class="filter-section">
+        <div class="filter-header">
+          <label class="toggle-label">
+            <span>Filter by Views</span>
+            <input type="checkbox" id="viewToggle">
+            <span class="toggle-switch"></span>
+          </label>
+        </div>
+        <div id="viewContainer" class="slider-container hidden">
+          <div class="sub-inputs">
+            <div class="sub-input-group">
+              <label for="viewMin">Min</label>
+              <input type="text" id="viewMin" placeholder="e.g. 50K" value="0">
+            </div>
+            <div class="sub-input-group">
+              <label for="viewMax">Max</label>
+              <input type="text" id="viewMax" placeholder="e.g. 2M" value="">
+            </div>
+          </div>
+          <div class="sub-hint">Use K for thousands, M for millions (e.g. 100K, 1.5M)</div>
+        </div>
+      </div>
+      
+      <label for="urlInput">YouTube URL</label>
+      <input id="urlInput" type="url" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" />
+      <button id="previewBtn">Preview</button>
+
+      <div id="preview" class="hidden">
+        <img id="thumb" alt="Thumbnail" />
+        <div id="title"></div>
+        <button id="addBtn">Add to Notion</button>
+      </div>
+
+      <div id="message" role="status"></div>
+      <div class="hint">
+        Configure your Notion API token and database in <a href="#" id="openOptions">Options</a>.
+      </div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+  </html>
+
+
+
+

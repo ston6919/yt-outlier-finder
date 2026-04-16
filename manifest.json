@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Thumbnail to Notion",
+  "version": "0.1.1",
+  "description": "Enter a YouTube URL, preview its title and thumbnail, and add it to your Notion database.",
+  "action": {
+    "default_title": "Add YouTube to Notion",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "activeTab",
+    "scripting",
+    "downloads"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://youtube.com/*",
+    "https://www.notion.com/*",
+    "https://api.notion.com/*",
+    "https://*/*",
+    "https://www.skool.com/*",
+    "https://skool.com/*",
+    "https://generativelanguage.googleapis.com/*"
+  ]
+}
+

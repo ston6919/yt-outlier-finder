@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Notion Settings</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 24px; color: #111827; }
+      h1 { margin: 0 0 16px 0; font-size: 18px; }
+      label { display: block; font-size: 12px; color: #6b7280; margin-top: 12px; }
+      input { width: 100%; box-sizing: border-box; padding: 10px; margin-top: 6px; border: 1px solid #d1d5db; border-radius: 6px; }
+      button { margin-top: 16px; border: none; background: #111827; color: #ffffff; padding: 10px 12px; border-radius: 6px; cursor: pointer; }
+      #message { margin-top: 10px; font-size: 12px; color: #374151; }
+      .tip { margin-top: 18px; font-size: 12px; color: #6b7280; }
+      code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <h1>Notion Settings</h1>
+    <label for="token">Notion Internal Integration Token</label>
+    <input id="token" type="password" placeholder="secret_..." />
+
+    <label for="db">Target Database ID</label>
+    <input id="db" type="text" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+
+    <h2 style="margin-top: 32px; font-size: 16px;">n8n webhooks</h2>
+    <p class="tip" style="margin-top: 0;">Used for &ldquo;Add To Notion As Inspiration&rdquo; (context menu) and &ldquo;Generate Daily AI News&rdquo;. Paste your workflow webhook URLs from n8n.</p>
+
+    <label for="inspirationWebhookUrl">Inspiration webhook URL (POST)</label>
+    <input id="inspirationWebhookUrl" type="url" placeholder="https://your-n8n.example/webhook/..." autocomplete="off" />
+
+    <label for="newsWebhookUrl">Daily AI News webhook URL (GET)</label>
+    <input id="newsWebhookUrl" type="url" placeholder="https://your-n8n.example/webhook/..." autocomplete="off" />
+
+    <h2 style="margin-top: 32px; font-size: 16px;">Infographic Settings</h2>
+    
+    <label for="geminiKey">Google AI Studio API Key</label>
+    <input id="geminiKey" type="password" placeholder="AIza..." />
+
+    <label for="nanoBananaModel">Model</label>
+    <select id="nanoBananaModel" style="width: 100%; box-sizing: border-box; padding: 10px; margin-top: 6px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff;">
+      <option value="gemini-2.5-flash-image">Nano Banana (Fast)</option>
+      <option value="gemini-3-pro-image-preview">Nano Banana Pro (Higher Quality)</option>
+    </select>
+
+    <label for="imageAspectRatio">Aspect Ratio</label>
+    <select id="imageAspectRatio" style="width: 100%; box-sizing: border-box; padding: 10px; margin-top: 6px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff;">
+      <option value="1:1">1:1 (Square)</option>
+      <option value="16:9">16:9 (Landscape)</option>
+      <option value="9:16">9:16 (Portrait)</option>
+      <option value="4:3">4:3 (Standard)</option>
+      <option value="3:4">3:4 (Portrait Standard)</option>
+      <option value="3:2">3:2 (Photo)</option>
+      <option value="2:3">2:3 (Portrait Photo)</option>
+      <option value="21:9">21:9 (Ultrawide)</option>
+    </select>
+
+    <label for="imageQuality">Image Quality</label>
+    <select id="imageQuality" style="width: 100%; box-sizing: border-box; padding: 10px; margin-top: 6px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff;">
+      <option value="1K">1K (Standard)</option>
+      <option value="2K">2K (High)</option>
+      <option value="4K">4K (Ultra)</option>
+    </select>
+
+    <label for="infographicPrompt">Infographic Prompt Template</label>
+    <textarea id="infographicPrompt" rows="4" style="width: 100%; box-sizing: border-box; padding: 10px; margin-top: 6px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; resize: vertical;" placeholder="Create a professional news infographic about: {text}"></textarea>
+    <div class="tip" style="margin-top: 6px;">Use <code>{text}</code> as a placeholder for the selected text.</div>
+
+    <label style="margin-top: 16px; display: block;">Reference Image (Optional)</label>
+    <div class="tip" style="margin-top: 4px; margin-bottom: 8px;">Upload an example image for the model to use as a style reference.</div>
+    <div id="imagePreviewContainer" style="display: none; margin-bottom: 10px;">
+      <img id="referenceImagePreview" style="max-width: 200px; max-height: 150px; border-radius: 6px; border: 1px solid #d1d5db;" />
+      <button type="button" id="removeImage" style="display: block; margin-top: 8px; background: #991b1b; font-size: 11px; padding: 6px 10px;">Remove Image</button>
+    </div>
+    <input type="file" id="referenceImageInput" accept="image/png, image/jpeg, image/webp" style="margin-top: 6px;" />
+
+    <button id="save">Save</button>
+    <div id="message" role="status"></div>
+
+    <div class="tip">
+      Create a Notion integration, copy the token, and share your database with it. The database should include a <code>Name</code> title property. A <code>URL</code> property (type URL) is optional but recommended.
+    </div>
+
+    <script src="options.js"></script>
+  </body>
+  </html>
+
+
+
+
