@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Thumbnail to Notion",
-  "version": "0.1.1",
-  "description": "Enter a YouTube URL, preview its title and thumbnail, and add it to your Notion database.",
+  "name": "YT Outlier Finder",
+  "version": "0.2.0",
+  "description": "Filter YouTube videos live by outlier score, subscribers, and views. Send videos (with URL and outlier data) to a target webhook for custom handling.",
   "action": {
-    "default_title": "Add YouTube to Notion",
+    "default_title": "YT Outlier Finder",
     "default_popup": "popup.html"
   },
   "options_page": "options.html",
@@ -28,12 +28,7 @@
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://youtube.com/*",
-    "https://www.notion.com/*",
-    "https://api.notion.com/*",
-    "https://*/*",
-    "https://www.skool.com/*",
-    "https://skool.com/*",
-    "https://generativelanguage.googleapis.com/*"
+    "https://*/*"
   ]
 }
 

@@ -21,58 +21,56 @@ function setMessage(text, isError = false) {
   msg.style.color = isError ? '#b91c1c' : '#374151';
 }
 
-async function getNotionConfig() {
-  return new Promise((resolve) => {
-    chrome.storage.sync.get(['notionToken', 'databaseId'], (items) => {
-      resolve({ notionToken: items.notionToken || '', databaseId: items.databaseId || '' });
+async function sendToTargetWebhook(videoData) {
+  return new Promise((resolve, reject) => {
+    chrome.storage.sync.get(['targetWebhookUrl'], async (items) => {
+      const webhookUrl = (items.targetWebhookUrl || '').trim();
+      if (!webhookUrl) {
+        reject(new Error('Target webhook URL missing. Set it in Options.'));
+        return;
+      }
+
+      const body = [
+        {
+          videoURL: videoData.videoURL,
+          title: videoData.title || null,
+          thumbnailUrl: videoData.thumbnailUrl || null,
+          outlierMultiple: null
+        }
+      ];
+
+      try {
+        const res = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const err = await res.text().catch(() => '');
+          reject(new Error(`Webhook error (${res.status}): ${err || res.statusText}`));
+          return;
+        }
+
+        // Try to extract a useful URL from response for clickable toast
+        let responseUrl = null;
+        try {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            responseUrl = data[0].url || data[0].notionUrl || data[0].notion_url;
+          } else if (data) {
+            responseUrl = data.url || data.notionUrl || data.notion_url || (data.data && (data.data.url || data.data.notionUrl));
+          }
+        } catch (e) {
+          // non-JSON or no url is fine
+        }
+
+        resolve(responseUrl);
+      } catch (e) {
+        reject(e);
+      }
     });
   });
-}
-
-async function addToNotion({ title, thumbnailUrl, videoUrl }) {
-  const { notionToken, databaseId } = await getNotionConfig();
-  if (!notionToken || !databaseId) {
-    throw new Error('Notion settings missing. Set them in Options.');
-  }
-
-  const body = {
-    parent: { database_id: databaseId },
-    properties: {
-      Title: { title: [{ text: { content: title } }] },
-      image: {
-        files: [
-          {
-            name: 'Thumbnail',
-            type: 'external',
-            external: { url: thumbnailUrl }
-          }
-        ]
-      }
-    },
-    cover: { type: 'external', external: { url: thumbnailUrl } },
-    children: [
-      {
-        object: 'block',
-        type: 'image',
-        image: { type: 'external', external: { url: thumbnailUrl } }
-      }
-    ]
-  };
-
-  const res = await fetch('https://api.notion.com/v1/pages', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${notionToken}`,
-      'Content-Type': 'application/json',
-      'Notion-Version': '2022-06-28'
-    },
-    body: JSON.stringify(body)
-  });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`Notion API error (${res.status}): ${errText || res.statusText}`);
-  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -82,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const preview = document.getElementById('preview');
   const thumb = document.getElementById('thumb');
   const titleEl = document.getElementById('title');
-  const addBtn = document.getElementById('addBtn');
+  const sendBtn = document.getElementById('sendBtn');
   
   // Outlier filter elements
   const outlierToggle = document.getElementById('outlierToggle');
@@ -254,20 +252,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  addBtn.addEventListener('click', async () => {
-    setMessage('Adding to Notion...');
-    addBtn.disabled = true;
+  sendBtn.addEventListener('click', async () => {
+    setMessage('Sending to webhook...');
+    sendBtn.disabled = true;
     try {
-      await addToNotion({
-        title: preview.dataset.title || '',
-        thumbnailUrl: preview.dataset.thumbnailUrl || '',
-        videoUrl: preview.dataset.videoUrl || ''
+      const responseUrl = await sendToTargetWebhook({
+        videoURL: preview.dataset.videoUrl || '',
+        title: preview.dataset.title || null,
+        thumbnailUrl: preview.dataset.thumbnailUrl || null
       });
-      setMessage('Added to Notion successfully.');
+      if (responseUrl) {
+        setMessage('Sent! Click to open response.');
+        // Make the message area clickable
+        const msgEl = document.getElementById('message');
+        msgEl.style.cursor = 'pointer';
+        msgEl.style.textDecoration = 'underline';
+        const openHandler = () => {
+          window.open(responseUrl, '_blank');
+          msgEl.removeEventListener('click', openHandler);
+          msgEl.style.cursor = '';
+          msgEl.style.textDecoration = '';
+        };
+        msgEl.addEventListener('click', openHandler, { once: true });
+      } else {
+        setMessage('Sent to webhook.');
+      }
     } catch (e) {
-      setMessage(e.message || 'Failed to add to Notion.', true);
+      setMessage(e.message || 'Failed to send to webhook.', true);
     } finally {
-      addBtn.disabled = false;
+      sendBtn.disabled = false;
     }
   });
 });

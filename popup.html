@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>YouTube → Notion</title>
+    <title>YT Outlier Finder</title>
     <link rel="stylesheet" href="popup.css">
   </head>
   <body>
     <div id="app">
-      <h1>YouTube → Notion</h1>
+      <h1>YT Outlier Finder</h1>
       
       <!-- Outlier Filter Section -->
       <div class="filter-section">
@@ -83,12 +83,12 @@
       <div id="preview" class="hidden">
         <img id="thumb" alt="Thumbnail" />
         <div id="title"></div>
-        <button id="addBtn">Add to Notion</button>
+        <button id="sendBtn">Send to Webhook</button>
       </div>
 
       <div id="message" role="status"></div>
       <div class="hint">
-        Configure your Notion API token and database in <a href="#" id="openOptions">Options</a>.
+        Configure the target webhook in <a href="#" id="openOptions">Options</a>.
       </div>
     </div>
     <script src="popup.js"></script>

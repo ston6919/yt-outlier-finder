@@ -1,35 +1,88 @@
-# YouTube Thumbnail to Notion (Chrome Extension)
+# YT Outlier Finder
 
-Enter a YouTube URL, preview its title and thumbnail, and add it to your Notion database.
+Chrome extension that lets you:
 
-## Install (Developer Mode)
+- Live-filter videos on any YouTube page (home, search, subscriptions, channels, etc.) by outlier score, subscriber count, and/or view count.
+- Send videos to a single **target webhook** (from the popup or right-click context menus on YouTube), including the video URL and the outlier multiplier detected on the page (if visible via vidIQ-style badges).
 
-1. Open Chrome → Menu → Extensions → Manage Extensions.
-2. Enable Developer mode (top right).
-3. Click "Load unpacked" and select this folder.
-4. Click the extension icon to open the popup.
+Use this to feed your own server, n8n workflow, Make.com scenario, database ingester, etc.
 
-## Configure Notion
+## Installation
 
-1. Create a Notion internal integration and copy the token.
-2. Share your target database with that integration.
-3. Open the extension Options and paste:
-   - Notion Internal Integration Token
-   - Target Database ID (from the database URL)
-4. Ensure the database has a title property named `Name`. Optionally add a URL property named `URL`.
+1. Clone or download the repo.
+2. In Chrome go to `chrome://extensions`, enable Developer mode.
+3. "Load unpacked" and select this folder.
+4. (Optional) Pin the extension.
 
-## Usage
+## Live Filtering (the main "finder" feature)
 
-1. Paste a YouTube URL in the popup and click Preview.
-2. Confirm the title and thumbnail.
-3. Click "Add to Notion" to create a page with the thumbnail as cover and an image block.
+Open the popup on any YouTube page. Toggle and set thresholds for:
+
+- **Filter by Outlier** — e.g. only show 5x+ or 10x+ videos.
+- **Filter by Subscribers** — min / max channel size (supports K/M/B).
+- **Filter by Views** — min / max on the video.
+
+Changes apply instantly to the current tab and persist. Videos without detectable data for a filter are generally left visible.
+
+This works by parsing the DOM (vidIQ or similar extensions that add "12.4x" outlier badges/popovers and subscriber/view numbers make it much more reliable).
+
+**Important:** For the outlier score (`outlierMultiple`) to work reliably, you **must** install the official [vidIQ Vision for YouTube](https://chromewebstore.google.com/detail/vidiq-vision-for-youtube/pachckjkecffpdphbpmfolblodfkgbhl) Chrome extension. The extension looks for the data attributes and badges that vidIQ adds to video cards on YouTube. Without it, `outlierMultiple` will almost always be `null`.
+
+## Sending Videos to Your Webhook
+
+### From the popup (manual)
+1. Paste a full YouTube watch URL.
+2. Click **Preview** (uses public oEmbed — no key needed).
+3. Click **Send to Webhook**.
+
+### From YouTube pages (recommended)
+Right-click any YouTube video link or on a watch page → **Send to Webhook**.
+
+The extension will:
+- Try to extract the outlier score visible near that video on the page (requires vidIQ — see note above).
+- Fetch the video title and thumbnail URL.
+- POST everything to your configured target webhook.
+
+## Target Webhook Contract (what your server receives)
+
+**Method:** POST  
+**Content-Type:** application/json
+
+**Body (always an array with one item):**
+
+```json
+[
+  {
+    "videoURL": "https://www.youtube.com/watch?v=...",
+    "title": "Video Title Here",
+    "thumbnailUrl": "https://i.ytimg.com/vi/.../hqdefault.jpg",
+    "outlierMultiple": 12.5
+  }
+]
+```
+
+- `videoURL`: the full watch URL.
+- `title`: the video title (fetched via YouTube oEmbed).
+- `thumbnailUrl`: the standard thumbnail URL.
+- `outlierMultiple`: a number (e.g. 5, 9.7, 42) if we could scrape it from vidIQ-style elements on the page, otherwise `null`.
+
+Your server can respond with any JSON. If the response contains a top-level `url` (or `notionUrl` / `notion_url`), the success toast on the YouTube page will be made clickable.
+
+## Configuration
+
+Click the extension icon → **Options** (or right-click the extension icon in the toolbar).
+
+Only one setting:
+
+- **Target Webhook URL (POST)** — the endpoint that will receive the payload above.
+
+That's it. No API keys, no Notion, no Gemini/infographics in this version.
 
 ## Notes
 
-- Video details are fetched via YouTube's oEmbed endpoint (no API key needed).
-- The page cover and image block use the thumbnail's external URL.
-- Notion API version used: 2022-06-28.
+- The extension only needs broad host permissions because webhooks can live anywhere.
+- Outlier extraction is best-effort DOM scraping. It works great when vidIQ (or similar) is also installed and showing the "X x" badges.
+- The popup filters and the "Send to Webhook" action are completely independent.
+- All settings live in Chrome sync storage.
 
-
-
-
+Build whatever you want on the receiving end — this just reliably gives you the video + its outlier score when you find something interesting while browsing.
