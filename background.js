@@ -10,6 +10,100 @@ function fetchYouTubeMeta(youtubeUrl) {
   });
 }
 
+/** 11-char YouTube video id from a watch/shorts/ytimg URL */
+function extractYouTubeVideoId(rawUrl) {
+  if (!rawUrl) return null;
+  try {
+    const u = new URL(rawUrl, 'https://www.youtube.com');
+    const host = u.hostname.replace(/^www\./, '');
+    if (host === 'youtu.be') {
+      const id = u.pathname.split('/').filter(Boolean)[0];
+      return id && /^[\w-]{11}$/.test(id) ? id : null;
+    }
+    if (host.endsWith('youtube.com')) {
+      const v = u.searchParams.get('v');
+      if (v && /^[\w-]{11}$/.test(v)) return v;
+      const shorts = u.pathname.match(/^\/shorts\/([\w-]{11})/);
+      if (shorts) return shorts[1];
+      const embed = u.pathname.match(/^\/embed\/([\w-]{11})/);
+      if (embed) return embed[1];
+    }
+    if (u.hostname.includes('ytimg.com')) {
+      const m = u.pathname.match(/\/vi\/([\w-]{11})\//);
+      if (m) return m[1];
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+}
+
+function sanitizeDownloadBasename(name) {
+  const s = (name || 'thumbnail').replace(/[/\\?%*:|"<>]/g, '').trim();
+  return s.slice(0, 120) || 'thumbnail';
+}
+
+/**
+ * Prefer maxres poster; fall back to oEmbed thumbnail if missing or tiny placeholder.
+ */
+async function downloadYouTubeThumbnailToDisk(pageOrImageUrl) {
+  const videoId = extractYouTubeVideoId(pageOrImageUrl);
+  if (!videoId) {
+    throw new Error('Could not find a YouTube video here.');
+  }
+  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  const meta = await fetchYouTubeMeta(watchUrl);
+  const title = meta.title || videoId;
+  const basename = sanitizeDownloadBasename(title);
+
+  const maxresUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+  const res = await fetch(maxresUrl);
+  let downloadUrl = meta.thumbnail_url;
+  let extension = 'jpg';
+
+  if (res.ok) {
+    const blob = await res.blob();
+    const type = blob.type || '';
+    if (type.startsWith('image') && blob.size > 2000) {
+      // Use the real https URL here — MV3 service workers often lack URL.createObjectURL for blobs.
+      await new Promise((resolve, reject) => {
+        chrome.downloads.download(
+          {
+            url: maxresUrl,
+            filename: `${basename}-thumbnail.jpg`,
+            saveAs: false
+          },
+          (downloadId) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(downloadId);
+            }
+          }
+        );
+      });
+      return;
+    }
+  }
+
+  if (downloadUrl.includes('.png')) extension = 'png';
+  await new Promise((resolve, reject) => {
+    chrome.downloads.download(
+      {
+        url: downloadUrl,
+        filename: `${basename}-thumbnail.${extension}`,
+        saveAs: false
+      },
+      (downloadId) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(downloadId);
+        }
+      }
+    );
+  });
+}
 
 function getTargetWebhookUrl() {
   return new Promise((resolve) => {
@@ -66,10 +160,6 @@ async function callTargetWebhook(videoData) {
     return null;
   }
 }
-
-
-
-
 
 function showToast(tabId, message, isError = false) {
   chrome.scripting.executeScript({
@@ -139,6 +229,45 @@ function createMenus() {
       'https://youtube.com/watch*'
     ]
   });
+
+  chrome.contextMenus.create({
+    id: 'download-yt-thumb-link',
+    title: 'Download thumbnail',
+    contexts: ['link'],
+    targetUrlPatterns: [
+      'https://www.youtube.com/watch*',
+      'https://youtube.com/watch*',
+      'https://www.youtube.com/shorts/*',
+      'https://youtube.com/shorts/*',
+      'https://youtu.be/*'
+    ]
+  });
+
+  chrome.contextMenus.create({
+    id: 'download-yt-thumb-page',
+    title: 'Download thumbnail',
+    contexts: ['page'],
+    documentUrlPatterns: [
+      'https://www.youtube.com/watch*',
+      'https://youtube.com/watch*',
+      'https://m.youtube.com/watch*',
+      'https://www.youtube.com/shorts/*',
+      'https://youtube.com/shorts/*',
+      'https://m.youtube.com/shorts/*'
+    ]
+  });
+
+  chrome.contextMenus.create({
+    id: 'download-yt-thumb-image',
+    title: 'Download thumbnail',
+    contexts: ['image'],
+    documentUrlPatterns: [
+      'https://www.youtube.com/*',
+      'https://youtube.com/*',
+      'https://m.youtube.com/*'
+    ],
+    targetUrlPatterns: ['*://*.ytimg.com/vi/*', '*://i.ytimg.com/*']
+  });
 }
 
 chrome.runtime.onInstalled.addListener(createMenus);
@@ -146,6 +275,32 @@ chrome.runtime.onStartup.addListener(createMenus);
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   try {
+    if (
+      info.menuItemId === 'download-yt-thumb-link' ||
+      info.menuItemId === 'download-yt-thumb-page' ||
+      info.menuItemId === 'download-yt-thumb-image'
+    ) {
+      const rawUrl =
+        info.menuItemId === 'download-yt-thumb-link'
+          ? info.linkUrl
+          : info.menuItemId === 'download-yt-thumb-page'
+            ? info.pageUrl
+            : info.srcUrl;
+      if (!rawUrl || !tab || !tab.id) return;
+
+      showToast(tab.id, 'Downloading thumbnail...');
+      try {
+        await downloadYouTubeThumbnailToDisk(rawUrl);
+        removeToast(tab.id);
+        showToast(tab.id, 'Thumbnail downloaded');
+      } catch (e) {
+        console.error('Download thumbnail error:', e);
+        removeToast(tab.id);
+        showToast(tab.id, e.message || 'Could not download thumbnail', true);
+      }
+      return;
+    }
+
     const isLinkMenu = info.menuItemId === 'send-video-to-webhook-link';
     const isPageMenu = info.menuItemId === 'send-video-to-webhook-page';
 

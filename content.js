@@ -12,6 +12,10 @@ let viewFilterEnabled = false;
 let viewMinValue = 0;
 let viewMaxValue = Infinity;
 
+const SMALL_CHANNEL_OUTLIER_MIN = 10;
+const SMALL_CHANNEL_SUB_MAX = 50000;
+const SMALL_CHANNEL_HIGHLIGHT_ATTR = 'data-small-channel-outlier-highlight';
+
 // Parse subscriber count strings like "2.13M", "500K", "1.5B", "50000"
 function parseSubscriberCount(text) {
   if (!text) return null;
@@ -228,6 +232,49 @@ function getViewCount(videoContainer) {
   return null;
 }
 
+function shouldHighlightSmallChannelOutlier(videoContainer) {
+  const outlierValue = getOutlierValue(videoContainer);
+  if (outlierValue === null || outlierValue <= SMALL_CHANNEL_OUTLIER_MIN) {
+    return false;
+  }
+
+  const subCount = getSubscriberCount(videoContainer);
+  if (subCount === null || subCount >= SMALL_CHANNEL_SUB_MAX) {
+    return false;
+  }
+
+  return true;
+}
+
+function applySmallChannelOutlierHighlight(videoContainer) {
+  if (shouldHighlightSmallChannelOutlier(videoContainer)) {
+    videoContainer.setAttribute(SMALL_CHANNEL_HIGHLIGHT_ATTR, 'true');
+  } else {
+    videoContainer.removeAttribute(SMALL_CHANNEL_HIGHLIGHT_ATTR);
+  }
+}
+
+function injectSmallChannelHighlightStyles() {
+  if (document.getElementById('small-channel-outlier-highlight-style')) return;
+
+  const style = document.createElement('style');
+  style.id = 'small-channel-outlier-highlight-style';
+  style.textContent = `
+    [${SMALL_CHANNEL_HIGHLIGHT_ATTR}="true"] {
+      background-color: #fee2e2 !important;
+      border-radius: 8px;
+      box-shadow: inset 0 0 0 1px #fecaca;
+    }
+
+    html[dark] [${SMALL_CHANNEL_HIGHLIGHT_ATTR}="true"],
+    html[dark="true"] [${SMALL_CHANNEL_HIGHLIGHT_ATTR}="true"] {
+      background-color: rgba(220, 38, 38, 0.2) !important;
+      box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.45);
+    }
+  `;
+  document.documentElement.appendChild(style);
+}
+
 // Apply the outlier filter to all videos on the page
 function applyOutlierFilter() {
   // Only run on YouTube
@@ -241,6 +288,8 @@ function applyOutlierFilter() {
   videoContainers.forEach(container => {
     // Skip if this is inside a dismissed/hidden parent
     if (container.closest('[hidden]')) return;
+
+    applySmallChannelOutlierHighlight(container);
     
     // Check if any filter is enabled
     const anyFilterEnabled = outlierFilterEnabled || subFilterEnabled || viewFilterEnabled;
@@ -297,6 +346,8 @@ function applyOutlierFilter() {
 // Initialize outlier filter when on YouTube
 function initOutlierFilter() {
   if (!window.location.hostname.includes('youtube.com')) return;
+
+  injectSmallChannelHighlightStyles();
   
   // Load initial settings
   loadFilterSettings();
